@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 from agent.state_schema import AgentState
+model_path = "data/lbfmodel.yaml"
+
+
 
 # 3D model points of facial features (nose, eyes, etc.)
 MODEL_POINTS = np.array([
@@ -16,7 +19,7 @@ class HeadPoseEstimator:
     def __init__(self):
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
         self.landmark_detector = cv2.face.createFacemarkLBF()
-        self.landmark_detector.loadModel(cv2.data.haarcascades + "lbfmodel.yaml")  # You need this model
+        self.landmark_detector.loadModel(model_path)  # You need this model
 
     def get_head_direction(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -67,3 +70,15 @@ class HeadPoseEstimator:
             return "up"
         else:
             return "neutral"
+estimator = HeadPoseEstimator()
+
+def head_pose_node(state: AgentState) -> AgentState:
+    frame = state["frame"]
+    direction = estimator.get_head_direction(frame)
+
+    # Update tilt counts
+    if direction in state["head_data"]["tilt_counts"]:
+        state["head_data"]["tilt_counts"][direction] += 1
+
+    state["head_data"]["total_samples"] += 1
+    return state

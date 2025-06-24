@@ -1,46 +1,52 @@
-from gaze_tracking import GazeTracking
+import cv2
 from agent.state_schema import AgentState
 
+# Load pre-trained OpenCV eye detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
 
+def estimate_gaze_direction(eye_roi):
+    # Divide eye ROI into left and right halves
+    h, w = eye_roi.shape
+    left_side = eye_roi[:, :w//2]
+    right_side = eye_roi[:, w//2:]
 
-class EyeTracker:
-    def __init__(self):
-        self.gaze = GazeTracking()
+    # Count dark pixels (the pupil is dark)
+    left_dark = cv2.countNonZero(cv2.threshold(left_side, 50, 255, cv2.THRESH_BINARY_INV)[1])
+    right_dark = cv2.countNonZero(cv2.threshold(right_side, 50, 255, cv2.THRESH_BINARY_INV)[1])
 
-    def get_gaze_direction(self, frame):
-        self.gaze.refresh(frame)
+    if abs(left_dark - right_dark) < 100:
+        return "center"
+    elif left_dark > right_dark:
+        return "right"
+    else:
+        return "left"
 
-        if self.gaze.is_blinking():
-            return "blink"
-        elif self.gaze.is_right():
-            return "right"
-        elif self.gaze.is_left():
-            return "left"
-        elif self.gaze.is_center():
-            return "center"
-        else:
-            return "unknown"
-        
-
-tracker = EyeTracker()
 def eye_node(state: AgentState) -> AgentState:
     frame = state["frame"]
-    direction = tracker.get_gaze_direction(frame)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Access eye_data
-    eye_data = state["eye_data"]
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-    # 1. Append gaze direction
-    eye_data["gaze_direction_log"].append(direction)
+    direction = "unknown"
+    for (x, y, w, h) in faces:
+        roi_gray = gray[y:y+h, x:x+w]
+        eyes = eye_cascade.detectMultiScale(roi_gray)
+        if len(eyes) == 0:
+            direction = "unknown"
+            break
 
-    # 2. Increment total samples
-    eye_data["total_samples"] += 1
+        # Use only first detected eye
+        (ex, ey, ew, eh) = eyes[0]
+        eye_roi = roi_gray[ey:ey+eh, ex:ex+ew]
+        direction = estimate_gaze_direction(eye_roi)
+        break  # one face, one eye
 
-    # 3. If blink, increment blink count
+    # Update state
+    state["eye_data"]["gaze_direction_log"].append(direction)
+    state["eye_data"]["total_samples"] += 1
+
     if direction == "blink":
-        eye_data["blink_count"] += 1
-
-    # Update back in state (optional, if needed)
-    state["eye_data"] = eye_data
+        state["eye_data"]["blink_count"] += 1
 
     return state

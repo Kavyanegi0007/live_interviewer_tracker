@@ -1,4 +1,6 @@
 from agent.agent_graph import agent_graph
+
+from agent.agent_graph_audio import agent_graph_audio
 import time
 import cv2
 
@@ -19,6 +21,12 @@ state = {
         },
         "total_samples": 0
     },
+
+        "audio_data": {
+        "anomaly_detected": False,
+        "noise_levels": [],
+        "total_samples": 0
+    },
     "current_frame_timestamp": time.time(),
     "last_action_timestamp": 0.0,
     "action_log": []
@@ -33,6 +41,7 @@ while True:
     state["frame"] = frame
     state["current_frame_timestamp"] = time.time()
     state = agent_graph.invoke(state)
+    state = agent_graph_audio.invoke(state)
 
     # Optional: display live frame
     cv2.imshow("Live Feed", frame)

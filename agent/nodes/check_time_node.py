@@ -1,6 +1,6 @@
 from agent.state_schema import AgentState
 
-def check_time_router_function(state: AgentState) -> str: #we are returning a str not state (Router Node)
+def check_time_node(state: AgentState) -> str: #we are returning a str not state (Router Node)
     """
     Decide whether enough time (>= 7 minutes) has passed since the last action.
     If yes, return 'action_node'. Else, return 'eye_node' to continue monitoring.
