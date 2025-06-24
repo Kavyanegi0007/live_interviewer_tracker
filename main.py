@@ -31,27 +31,33 @@ state = {
     "last_action_timestamp": 0.0,
     "action_log": []
 }
-cap = cv2.VideoCapture(0)
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Failed to grab frame")
-        break
+import threading
 
-    state["frame"] = frame
-    state["current_frame_timestamp"] = time.time()
-    state = agent_graph.invoke(state)
-    state = agent_graph_audio.invoke(state)
+def run_vision_graph():
+    cap = cv2.VideoCapture(0)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            continue
+        state["frame"] = frame
+        state["current_frame_timestamp"] = time.time()
+        agent_graph.invoke(state)
+        cv2.imshow("Live Feed", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+        time.sleep(0.5)
+    cap.release()
+    cv2.destroyAllWindows()
 
-    # Optional: display live frame
-    cv2.imshow("Live Feed", frame)
+def run_audio_graph():
+    while True:
+        agent_graph_audio.invoke(state)
+        time.sleep(0.5)
+vision_thread = threading.Thread(target=run_vision_graph)
+audio_thread = threading.Thread(target=run_audio_graph)
 
-    # Press q to exit
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        print("Exiting loop...")
-        break
+vision_thread.start()
+audio_thread.start()
 
-    time.sleep(0.5)
-
-cap.release()
-cv2.destroyAllWindows()
+vision_thread.join()
+audio_thread.join()
