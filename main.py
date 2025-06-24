@@ -32,16 +32,21 @@ state = {
     "action_log": []
 }
 import threading
-
+#run this seperately 
 def run_vision_graph():
     cap = cv2.VideoCapture(0)
+    last_graph_run = 0
     while True:
         ret, frame = cap.read()
         if not ret:
             continue
         state["frame"] = frame
         state["current_frame_timestamp"] = time.time()
-        agent_graph.invoke(state)
+        if state["current_frame_timestamp"] - last_graph_run >= 60:
+            print(f"🔍 Running analysis... {time.strftime('%H:%M:%S')}")
+            agent_graph.invoke(state)
+            last_graph_run = state["current_frame_timestamp"]
+        
         cv2.imshow("Live Feed", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

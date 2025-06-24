@@ -10,16 +10,14 @@ graph = StateGraph(AgentState)
 graph.add_node("eye_node", eye_node)
 graph.add_node("head_pose_node", head_pose_node)
 graph.add_node("action_node", action_node)
-graph.add_node("check_time_node", check_time_router_function)
 
 graph.set_entry_point("eye_node")
 
 graph.add_edge("eye_node", "head_pose_node")
-graph.add_edge("head_pose_node", "check_time_node")
 
 graph.add_conditional_edges(
-    "check_time_node",
-    check_time_router_function,  # must return "eye_node" or "action_node"
+    "head_pose_node",  
+    check_time_router_function,  
     {
         "eye_node": "eye_node",
         "action_node": "action_node"
